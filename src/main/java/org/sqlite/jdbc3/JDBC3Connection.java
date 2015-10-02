@@ -162,8 +162,14 @@ public abstract class JDBC3Connection extends CoreConnection {
         checkOpen();
         if (autoCommit)
             throw new SQLException("database in auto-commit mode");
-        db.exec("commit;");
-        db.exec(beginCommandMap.get(transactionMode));
+	try {
+	    db.exec("commit;");
+	} finally {
+	    try {
+		db.exec(beginCommandMap.get(transactionMode));
+	    } catch (SQLException e) {
+	    }
+	}
     }
 
     /**
@@ -173,8 +179,14 @@ public abstract class JDBC3Connection extends CoreConnection {
         checkOpen();
         if (autoCommit)
             throw new SQLException("database in auto-commit mode");
-        db.exec("rollback;");
-        db.exec(beginCommandMap.get(transactionMode));
+	try {
+	    db.exec("rollback;");
+	} finally {
+	    try {
+		db.exec(beginCommandMap.get(transactionMode));
+	    } catch (SQLException e) {
+	    }
+	}
     }
 
     /**

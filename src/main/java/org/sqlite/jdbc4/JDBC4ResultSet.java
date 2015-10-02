@@ -27,6 +27,24 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
         super(stmt);
     }
 
+    /**
+     * @see java.sql.ResultSet#absolute(int)
+     */
+    public boolean absolute(int n) throws SQLException {
+	if (n < 0) {
+	    throw new SQLException("Non positive positions not accepted.");
+	}
+	while (row < n) {
+	    next();
+	}
+	if (n < row) {
+	    close();
+	    ((JDBC4PreparedStatement) stmt).execute();
+	    return absolute(n);
+	}
+	return true;
+    }
+
     // JDBC 4
     public <T> T unwrap(Class<T> iface) throws SQLException {
         // TODO Auto-generated method stub
@@ -378,8 +396,6 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
     public boolean previous() throws SQLException {
         throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
     public boolean relative(int rows) throws SQLException {
-        throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
-    public boolean absolute(int row) throws SQLException {
         throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
     public void afterLast() throws SQLException {
         throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }

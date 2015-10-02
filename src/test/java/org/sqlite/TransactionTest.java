@@ -65,9 +65,9 @@ public class TransactionTest
         stat1.close();
         stat2.close();
         stat3.close();
-        conn1.close();
-        conn2.close();
-        conn3.close();
+        ((CoreConnection) conn1).realClose();
+        ((CoreConnection) conn2).realClose();
+        ((CoreConnection) conn3).realClose();
     }
 
     @Test
@@ -329,6 +329,6 @@ public class TransactionTest
         rs.next();
         assertEquals(2, rs.getInt(1));
         rs.close();
-        con.close();
+        ((CoreConnection) con).realClose();
     }
 }

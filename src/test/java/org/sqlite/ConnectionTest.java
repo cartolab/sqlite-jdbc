@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.sqlite.SQLiteConfig.JournalMode;
 import org.sqlite.SQLiteConfig.Pragma;
 import org.sqlite.SQLiteConfig.SynchronousMode;
+import org.sqlite.core.CoreConnection;
 
 /**
  * These tests check whether access to files is woring correctly and some
@@ -34,7 +35,7 @@ public class ConnectionTest
     public void isValid() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
         assertTrue(conn.isValid(0));
-        conn.close();
+        ((CoreConnection) conn).realClose();
         assertFalse(conn.isValid(0));
     }
 
@@ -42,7 +43,7 @@ public class ConnectionTest
     public void executeUpdateOnClosedDB() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
         Statement stat = conn.createStatement();
-        conn.close();
+        ((CoreConnection) conn).realClose();
 
         try {
             stat.executeUpdate("create table A(id, name)");
@@ -75,7 +76,7 @@ public class ConnectionTest
         }
         finally {
             stat.close();
-            conn.close();
+            ((CoreConnection) conn).realClose();
         }
 
         config.setReadOnly(true); // should be a no-op
@@ -88,7 +89,7 @@ public class ConnectionTest
            assert(e.getMessage().contains("Cannot change read-only flag after establishing a connection."));
         }
         finally {
-            conn.close();
+            ((CoreConnection) conn).realClose();
         }
     }
 
@@ -116,7 +117,7 @@ public class ConnectionTest
         }
         finally {
             stat.close();
-            conn.close();
+            ((CoreConnection) conn).realClose();
         }
 
     }
@@ -133,7 +134,7 @@ public class ConnectionTest
         }
         finally {
             stat.close();
-            conn.close();
+            ((CoreConnection) conn).realClose();
         }
 
     }
@@ -157,7 +158,7 @@ public class ConnectionTest
         }
         finally {
             stat.close();
-            conn.close();
+            ((CoreConnection) conn).realClose();
         }
 
     }
@@ -165,13 +166,13 @@ public class ConnectionTest
     @Test
     public void openMemory() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
-        conn.close();
+        ((CoreConnection) conn).realClose();
     }
 
     @Test
     public void isClosed() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
-        conn.close();
+        ((CoreConnection) conn).realClose();
         assertTrue(conn.isClosed());
     }
 
@@ -180,14 +181,14 @@ public class ConnectionTest
         Connection conn = DriverManager.getConnection("jdbc:sqlite:");
         PreparedStatement prep = conn.prepareStatement("select null;");
         ResultSet rs = prep.executeQuery();
-        conn.close();
+        ((CoreConnection) conn).realClose();
         prep.clearParameters();
     }
 
     @Test(expected = SQLException.class)
     public void openInvalidLocation() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:/");
-        conn.close();
+        ((CoreConnection) conn).realClose();
     }
 
     @Test
@@ -201,7 +202,7 @@ public class ConnectionTest
         assertTrue(rs.next());
         rs.close();
         stat.close();
-        conn.close();
+        ((CoreConnection) conn).realClose();
 
     }
 
@@ -217,7 +218,7 @@ public class ConnectionTest
         assertTrue(rs.next());
         rs.close();
         stat.close();
-        conn.close();
+        ((CoreConnection) conn).realClose();
     }
 
     @Test
@@ -227,7 +228,7 @@ public class ConnectionTest
 
         assertTrue(testDB.exists());
         Connection conn = DriverManager.getConnection(String.format("jdbc:sqlite:%s", testDB));
-        conn.close();
+        ((CoreConnection) conn).realClose();
     }
 
     public static File copyToTemp(String fileName) throws IOException {
@@ -307,7 +308,7 @@ public class ConnectionTest
          rs.close();
 
          stat.close();
-         conn.close();
+         ((CoreConnection) conn).realClose();
     }
 
     @Test
@@ -320,7 +321,7 @@ public class ConnectionTest
     	rs.close();
 
     	stat.close();
-    	conn.close();
+    	((CoreConnection) conn).realClose();
     }
 
     @Test(expected = SQLException.class)
@@ -345,7 +346,7 @@ public class ConnectionTest
     	rs.close();
 
     	stat.close();
-    	conn.close();
+    	((CoreConnection) conn).realClose();
     }
 
     @Test
@@ -361,7 +362,7 @@ public class ConnectionTest
     	rs.close();
 
     	stat.close();
-    	conn.close();
+    	((CoreConnection) conn).realClose();
     }
 
     @Test
@@ -379,6 +380,6 @@ public class ConnectionTest
     	rs.close();
 
     	stat.close();
-    	conn.close();
+    	((CoreConnection) conn).realClose();
     }
 }

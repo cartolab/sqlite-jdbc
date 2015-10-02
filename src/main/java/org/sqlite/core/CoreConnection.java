@@ -379,13 +379,24 @@ public abstract class CoreConnection {
      */
     @Override
     public void finalize() throws SQLException {
-        close();
+        realClose();
     }
 
     /**
      * @see java.sql.Connection#close()
      */
     public void close() throws SQLException {
+//        if (db == null)
+//            return;
+//        if (meta != null)
+//            meta.close();
+//
+//        db.close();
+//        db = null;
+    }
+
+
+    public void realClose() throws SQLException {
         if (db == null)
             return;
         if (meta != null)
