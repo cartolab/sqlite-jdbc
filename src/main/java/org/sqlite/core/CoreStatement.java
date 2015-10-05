@@ -30,7 +30,7 @@ public abstract class CoreStatement implements Codes
     protected CoreDatabaseMetaData metadata;
 
     public long       pointer;
-    protected String     sql            = null;
+    public String     sql            = null;
 
     protected int        batchPos;
     protected Object[]   batch          = null;

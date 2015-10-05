@@ -1,9 +1,12 @@
 package org.sqlite.jdbc3;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -14,14 +17,18 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.sqlite.core.CoreResultSet;
 import org.sqlite.core.CoreStatement;
 import org.sqlite.date.FastDateFormat;
+import org.sqlite.jdbc4.JDBC4Statement;
 
 public abstract class JDBC3ResultSet extends CoreResultSet {
     // ResultSet Functions //////////////////////////////////////////
@@ -30,22 +37,188 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         super(stmt);
     }
 
+    public void moveToInsertRow() throws SQLException {
+	checkInsertable();
+
+	if (insertStatement != null) {
+	    insertStatement = null;
+	}
+
+	// make sure the underlying data is null
+	clearRowBuffer(false);
+
+	onInsertRow = true;
+	doingUpdates = false;
+
+    }
+
     /**
-     * returns col in [1,x] form
-     * @see java.sql.ResultSet#findColumn(java.lang.String)
+     * @see java.sql.ResultSet#absolute(int)
      */
-    public int findColumn(String col) throws SQLException {
-        checkOpen();
-        Integer index = findColumnIndexInCache(col);
-        if (index != null) {
-            return index;
-        }
-        for (int i=0; i < cols.length; i++) {
-            if (col.equalsIgnoreCase(cols[i])) {
-                return addColumnIndexInCache(col, i+1);
-            }
-        }
-        throw new SQLException("no such column: '"+col+"'");
+    public boolean absolute(int n) throws SQLException {
+	if (n < 0) {
+	    throw new SQLException("Non positive positions not accepted.");
+	}
+	while (row < n) {
+	    next();
+	}
+	if (n < row) {
+	    close();
+	    ((JDBC4Statement) stmt).executeQuery();
+	    return absolute(n);
+	}
+	return true;
+    }
+
+    public void insertRow() throws SQLException {
+	checkInsertable();
+
+	if (!onInsertRow) {
+	    throw new SQLException("Not on the insert row.");
+	} else if (updateValues.size() == 0) {
+	    throw new SQLException(
+		    "You must specify at least one column value to insert a row.");
+	} else {
+
+	    // loop through the keys in the insertTable and create the sql
+	    // statement
+	    // we have to create the sql every time since the user could insert
+	    // different
+	    // columns each time
+
+	    StringBuffer insertSQL = new StringBuffer("INSERT INTO ").append(
+		    getTableName(stmt.sql)).append(" (");
+	    StringBuffer paramSQL = new StringBuffer(") VALUES (");
+
+	    Iterator<String> columnNames = updateValues.keySet().iterator();
+	    int numColumns = updateValues.size();
+
+	    for (int i = 0; columnNames.hasNext(); i++) {
+		String columnName = (String) columnNames.next();
+
+		insertSQL.append("\"" + columnName + "\"");
+		if (i < numColumns - 1) {
+		    insertSQL.append(", ");
+		    paramSQL.append("?,");
+		} else {
+		    paramSQL.append("?)");
+		}
+
+	    }
+
+	    insertSQL.append(paramSQL.toString());
+	    insertStatement = db.conn.prepareStatement(insertSQL.toString());
+
+	    Iterator<String> keys = updateValues.keySet().iterator();
+
+	    for (int i = 1; keys.hasNext(); i++) {
+		String key = (String) keys.next();
+		Object o = updateValues.get(key);
+		insertStatement.setObject(i, o);
+	    }
+	    // assureCommit();
+	    insertStatement.executeUpdate();
+	    insertStatement = null;
+
+	    // need to clear this in case of another insert
+	    clearRowBuffer(false);
+
+	}
+    }
+
+    public void updateRow() throws SQLException {
+	checkUpdateable();
+
+	if (onInsertRow) {
+	    throw new SQLException(
+		    "Cannot call updateRow() when on the insert row.");
+	}
+
+	if (isBeforeFirst() || isAfterLast()) {
+	    throw new SQLException(
+		    "Cannot update the ResultSet because it is either before the start or after the end of the results.");
+	}
+
+	if (!doingUpdates)
+	    return; // No work pending.
+
+	StringBuffer updateSQL = new StringBuffer("UPDATE " + getTableName(stmt.sql)
+		+ " SET  ");
+
+	Iterator<String> columnNames = updateValues.keySet().iterator();
+	List<String> names = new ArrayList<String>();
+
+	while (columnNames.hasNext()) {
+	    String columnName = (String) columnNames.next();
+	    if (!columnName.equals(keyName)) {
+		names.add(columnName);
+	    }
+	}
+
+	columnNames = names.iterator();
+	int numColumns = names.size();
+	for (int i = 0; columnNames.hasNext(); i++) {
+	    String columnName = (String) columnNames.next();
+	    updateSQL.append("\"" + columnName + "\"");
+	    updateSQL.append(" = ?");
+
+	    if (i < numColumns - 1)
+		updateSQL.append(", ");
+	}
+
+	updateSQL.append(" WHERE \"" + keyName + "\" = ?");
+
+	updateStatement = ((java.sql.Connection) db.conn)
+		.prepareStatement(updateSQL.toString());
+
+	int i = 1;
+	for (String name : names) {
+	    Object o = updateValues.get(name);
+	    updateStatement.setObject(i, o);
+	    i++;
+	}
+
+	updateStatement.setObject(i, updateValues.get(keyName));
+	// assureCommit();
+
+	updateStatement.executeUpdate();
+	updateStatement = null;
+
+	clearRowBuffer(false);
+	updateRowBuffer();
+	doingUpdates = false;
+    }
+
+    public void deleteRow() throws SQLException {
+	checkUpdateable();
+
+	if (onInsertRow) {
+	    throw new SQLException(
+		    "Cannot call deleteRow() when on the insert row.");
+	}
+
+	if (isBeforeFirst()) {
+	    throw new SQLException(
+		    "Currently positioned before the start of the ResultSet.  You cannot call deleteRow() here.");
+	}
+	if (isAfterLast()) {
+	    throw new SQLException(
+		    "Currently positioned after the end of the ResultSet.  You cannot call deleteRow() here.");
+	}
+
+	StringBuffer deleteSQL = new StringBuffer("DELETE FROM ").append(
+		getTableName(stmt.sql)).append(" WHERE \"" + keyName + "\" = ?");
+
+	deleteStatement = ((java.sql.Connection) db.conn)
+		    .prepareStatement(deleteSQL.toString());
+
+	deleteStatement.setObject(1, getString(keyName));
+
+	// assureCommit();
+	deleteStatement.executeUpdate();
+	deleteStatement = null;
+
+	absolute(row - 1);
     }
 
     /**
@@ -1076,6 +1249,299 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
         e.initCause(new NullPointerException());
 
         throw e;
+    }
+
+    public void updateAsciiStream(int columnIndex,
+	    java.io.InputStream x, int length) throws SQLException {
+	if (x == null) {
+	    updateNull(columnIndex);
+	    return;
+	}
+
+	try {
+	    InputStreamReader reader = new InputStreamReader(x, "ASCII");
+	    char data[] = new char[length];
+	    int numRead = 0;
+	    while (true) {
+		int n = reader.read(data, numRead, length - numRead);
+		if (n == -1)
+		    break;
+
+		numRead += n;
+
+		if (numRead == length)
+		    break;
+	    }
+	    updateString(columnIndex, new String(data, 0, numRead));
+	} catch (UnsupportedEncodingException uee) {
+	    throw new SQLException(
+		    "The JVM claims not to support the encoding: {0}");
+	} catch (IOException ie) {
+	    throw new SQLException("Provided InputStream failed.");
+	}
+    }
+
+    public void updateBigDecimal(int columnIndex,
+	    java.math.BigDecimal x) throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateBinaryStream(int columnIndex,
+	    java.io.InputStream x, int length) throws SQLException {
+	if (x == null) {
+	    updateNull(columnIndex);
+	    return;
+	}
+
+	byte data[] = new byte[length];
+	int numRead = 0;
+	try {
+	    while (true) {
+		int n = x.read(data, numRead, length - numRead);
+		if (n == -1)
+		    break;
+
+		numRead += n;
+
+		if (numRead == length)
+		    break;
+	    }
+	} catch (IOException ie) {
+	    throw new SQLException("Provided InputStream failed.");
+	}
+
+	if (numRead == length) {
+	    updateBytes(columnIndex, data);
+	} else {
+	    // the stream contained less data than they said
+	    // perhaps this is an error?
+	    byte data2[] = new byte[numRead];
+	    System.arraycopy(data, 0, data2, 0, numRead);
+	    updateBytes(columnIndex, data2);
+	}
+    }
+
+    // TODO We should store the boolean in the same format we try
+    // to parse it (0/1 instead of true/false)
+    public void updateBoolean(int columnIndex, boolean x)
+	    throws SQLException {
+	updateValue(columnIndex, new Boolean(x));
+    }
+
+    public void updateByte(int columnIndex, byte x)
+	    throws SQLException {
+	updateValue(columnIndex, String.valueOf(x));
+    }
+
+    public void updateBytes(int columnIndex, byte[] x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateCharacterStream(int columnIndex,
+	    java.io.Reader x, int length) throws SQLException {
+	if (x == null) {
+	    updateNull(columnIndex);
+	    return;
+	}
+
+	try {
+	    char data[] = new char[length];
+	    int numRead = 0;
+	    while (true) {
+		int n = x.read(data, numRead, length - numRead);
+		if (n == -1)
+		    break;
+
+		numRead += n;
+
+		if (numRead == length)
+		    break;
+	    }
+	    updateString(columnIndex, new String(data, 0, numRead));
+	} catch (IOException ie) {
+	    throw new SQLException("Provided Reader failed.");
+	}
+    }
+
+    // TODO We should store the Date object in one of the formats
+    // we try to parse when retrieving it
+    public void updateDate(int columnIndex, java.sql.Date x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateDouble(int columnIndex, double x)
+	    throws SQLException {
+	updateValue(columnIndex, new Double(x));
+    }
+
+    public void updateFloat(int columnIndex, float x)
+	    throws SQLException {
+	updateValue(columnIndex, new Float(x));
+    }
+
+    public void updateInt(int columnIndex, int x)
+	    throws SQLException {
+	updateValue(columnIndex, new Integer(x));
+    }
+
+    public void updateLong(int columnIndex, long x)
+	    throws SQLException {
+	updateValue(columnIndex, new Long(x));
+    }
+
+    public void updateNull(int columnIndex) throws SQLException {
+	updateValue(columnIndex, null);
+    }
+
+    public void updateObject(int columnIndex, Object x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateObject(int columnIndex, Object x, int scale)
+	    throws SQLException {
+	this.updateObject(columnIndex, x);
+
+    }
+
+    public void updateShort(int columnIndex, short x)
+	    throws SQLException {
+	updateValue(columnIndex, new Short(x));
+    }
+
+    public void updateString(int columnIndex, String x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateTime(int columnIndex, Time x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+    }
+
+    public void updateTimestamp(int columnIndex, Timestamp x)
+	    throws SQLException {
+	updateValue(columnIndex, x);
+
+    }
+
+    public void updateNull(String columnName) throws SQLException {
+	updateNull(findColumn(columnName));
+    }
+
+    // TODO We should store the boolean in the same format we try
+    // to parse it (0/1 instead of true/false)
+    public void updateBoolean(String columnName, boolean x)
+	    throws SQLException {
+	updateBoolean(findColumn(columnName), x);
+    }
+
+    public void updateByte(String columnName, byte x)
+	    throws SQLException {
+	updateByte(findColumn(columnName), x);
+    }
+
+    public void updateShort(String columnName, short x)
+	    throws SQLException {
+	updateShort(findColumn(columnName), x);
+    }
+
+    public void updateInt(String columnName, int x)
+	    throws SQLException {
+	updateInt(findColumn(columnName), x);
+    }
+
+    public void updateLong(String columnName, long x)
+	    throws SQLException {
+	updateLong(findColumn(columnName), x);
+    }
+
+    public void updateFloat(String columnName, float x)
+	    throws SQLException {
+	updateFloat(findColumn(columnName), x);
+    }
+
+    public void updateDouble(String columnName, double x)
+	    throws SQLException {
+	updateDouble(findColumn(columnName), x);
+    }
+
+    public void updateBigDecimal(String columnName, BigDecimal x)
+	    throws SQLException {
+	updateBigDecimal(findColumn(columnName), x);
+    }
+
+    public void updateString(String columnName, String x)
+	    throws SQLException {
+	updateString(findColumn(columnName), x);
+    }
+
+    public void updateBytes(String columnName, byte x[])
+	    throws SQLException {
+	updateBytes(findColumn(columnName), x);
+    }
+
+    // TODO We should store the Date object in one of the formats
+    // we try to parse when retrieving it
+    public void updateDate(String columnName, java.sql.Date x)
+	    throws SQLException {
+	updateDate(findColumn(columnName), x);
+    }
+
+    public void updateTime(String columnName, java.sql.Time x)
+	    throws SQLException {
+	updateTime(findColumn(columnName), x);
+    }
+
+    public void updateTimestamp(String columnName,
+	    java.sql.Timestamp x) throws SQLException {
+	updateTimestamp(findColumn(columnName), x);
+    }
+
+    public void updateAsciiStream(String columnName,
+	    java.io.InputStream x, int length) throws SQLException {
+	updateAsciiStream(findColumn(columnName), x, length);
+    }
+
+    public void updateBinaryStream(String columnName,
+	    java.io.InputStream x, int length) throws SQLException {
+	updateBinaryStream(findColumn(columnName), x, length);
+    }
+
+    public void updateCharacterStream(String columnName,
+	    java.io.Reader reader, int length) throws SQLException {
+	updateCharacterStream(findColumn(columnName), reader, length);
+    }
+
+    public void updateObject(String columnName, Object x, int scale)
+	    throws SQLException {
+	updateObject(findColumn(columnName), x);
+    }
+
+    public void updateObject(String columnName, Object x)
+	    throws SQLException {
+	updateObject(findColumn(columnName), x);
+    }
+
+    protected void updateValue(int columnIndex, Object value)
+	    throws SQLException {
+	if (onInsertRow) {
+	    checkInsertable();
+	} else {
+	    checkUpdateable();
+	}
+
+	if (!onInsertRow && (isBeforeFirst() || isAfterLast())) {
+	    throw new SQLException(
+		    "Cannot update the ResultSet because it is either before the start or after the end of the results.");
+	}
+
+	checkColumnIndex(columnIndex);
+
+	doingUpdates = !onInsertRow;
+	updateValues.put(cols[columnIndex - 1], value);
     }
 
 }

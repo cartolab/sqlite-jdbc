@@ -40,7 +40,7 @@ import org.sqlite.SQLiteErrorCode;
 public abstract class DB implements Codes
 {
     /** The JDBC Connection that 'owns' this database instance. */
-    SQLiteConnection                          conn   = null;
+    public SQLiteConnection      conn   = null;
 
     /** The "begin;"and "commit;" statement handles. */
     long                          begin  = 0;

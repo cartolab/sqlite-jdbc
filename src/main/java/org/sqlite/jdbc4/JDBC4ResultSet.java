@@ -7,7 +7,6 @@ import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
-import java.sql.Date;
 import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
@@ -15,8 +14,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.Map;
 
 import org.sqlite.core.CoreStatement;
@@ -25,24 +22,6 @@ import org.sqlite.jdbc3.JDBC3ResultSet;
 public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultSetMetaData {
     public JDBC4ResultSet(CoreStatement stmt) {
         super(stmt);
-    }
-
-    /**
-     * @see java.sql.ResultSet#absolute(int)
-     */
-    public boolean absolute(int n) throws SQLException {
-	if (n < 0) {
-	    throw new SQLException("Non positive positions not accepted.");
-	}
-	while (row < n) {
-	    next();
-	}
-	if (n < row) {
-	    close();
-	    ((JDBC4Statement) stmt).executeQuery();
-	    return absolute(n);
-	}
-	return true;
     }
 
     // JDBC 4
@@ -385,11 +364,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
     public URL getURL(String col)
         throws SQLException { throw unused(); }
 
-    public void insertRow() throws SQLException {
-        throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
     public void moveToCurrentRow() throws SQLException {
-        throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
-    public void moveToInsertRow() throws SQLException {
         throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
     public boolean last() throws SQLException {
         throw new SQLException("ResultSet is TYPE_FORWARD_ONLY"); }
@@ -406,102 +381,22 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
 
     public void cancelRowUpdates()
         throws SQLException { throw unused(); }
-    public void deleteRow()
-        throws SQLException { throw unused(); }
 
     public void updateArray(int col, Array x)
         throws SQLException { throw unused(); }
     public void updateArray(String col, Array x)
         throws SQLException { throw unused(); }
-    public void updateAsciiStream(int col, InputStream x, int l)
-        throws SQLException { throw unused(); }
-    public void updateAsciiStream(String col, InputStream x, int l)
-        throws SQLException { throw unused(); }
-    public void updateBigDecimal(int col, BigDecimal x)
-        throws SQLException { throw unused(); }
-    public void updateBigDecimal(String col, BigDecimal x)
-        throws SQLException { throw unused(); }
-    public void updateBinaryStream(int c, InputStream x, int l)
-        throws SQLException { throw unused(); }
-    public void updateBinaryStream(String c, InputStream x, int l)
-        throws SQLException { throw unused(); }
     public void updateBlob(int col, Blob x)
         throws SQLException { throw unused(); }
     public void updateBlob(String col, Blob x)
-        throws SQLException { throw unused(); }
-    public void updateBoolean(int col, boolean x)
-        throws SQLException { throw unused(); }
-    public void updateBoolean(String col, boolean x)
-        throws SQLException { throw unused(); }
-    public void updateByte(int col, byte x)
-        throws SQLException { throw unused(); }
-    public void updateByte(String col, byte x)
-        throws SQLException { throw unused(); }
-    public void updateBytes(int col, byte[] x)
-        throws SQLException { throw unused(); }
-    public void updateBytes(String col, byte[] x)
-        throws SQLException { throw unused(); }
-    public void updateCharacterStream(int c, Reader x, int l)
-        throws SQLException { throw unused(); }
-    public void updateCharacterStream(String c, Reader r, int l)
         throws SQLException { throw unused(); }
     public void updateClob(int col, Clob x)
         throws SQLException { throw unused(); }
     public void updateClob(String col, Clob x)
         throws SQLException { throw unused(); }
-    public void updateDate(int col, Date x)
-        throws SQLException { throw unused(); }
-    public void updateDate(String col, Date x)
-        throws SQLException { throw unused(); }
-    public void updateDouble(int col, double x)
-        throws SQLException { throw unused(); }
-    public void updateDouble(String col, double x)
-        throws SQLException { throw unused(); }
-    public void updateFloat(int col, float x)
-        throws SQLException { throw unused(); }
-    public void updateFloat(String col, float x)
-        throws SQLException { throw unused(); }
-    public void updateInt(int col, int x)
-        throws SQLException { throw unused(); }
-    public void updateInt(String col, int x)
-        throws SQLException { throw unused(); }
-    public void updateLong(int col, long x)
-        throws SQLException { throw unused(); }
-    public void updateLong(String col, long x)
-        throws SQLException { throw unused(); }
-    public void updateNull(int col)
-        throws SQLException { throw unused(); }
-    public void updateNull(String col)
-        throws SQLException { throw unused(); }
-    public void updateObject(int c, Object x)
-        throws SQLException { throw unused(); }
-    public void updateObject(int c, Object x, int s)
-        throws SQLException { throw unused(); }
-    public void updateObject(String col, Object x)
-        throws SQLException { throw unused(); }
-    public void updateObject(String c, Object x, int s)
-        throws SQLException { throw unused(); }
     public void updateRef(int col, Ref x)
         throws SQLException { throw unused(); }
     public void updateRef(String c, Ref x)
-        throws SQLException { throw unused(); }
-    public void updateRow()
-        throws SQLException { throw unused(); }
-    public void updateShort(int c, short x)
-        throws SQLException { throw unused(); }
-    public void updateShort(String c, short x)
-        throws SQLException { throw unused(); }
-    public void updateString(int c, String x)
-        throws SQLException { throw unused(); }
-    public void updateString(String c, String x)
-        throws SQLException { throw unused(); }
-    public void updateTime(int c, Time x)
-        throws SQLException { throw unused(); }
-    public void updateTime(String c, Time x)
-        throws SQLException { throw unused(); }
-    public void updateTimestamp(int c, Timestamp x)
-        throws SQLException { throw unused(); }
-    public void updateTimestamp(String c, Timestamp x)
         throws SQLException { throw unused(); }
 
     public void refreshRow()
