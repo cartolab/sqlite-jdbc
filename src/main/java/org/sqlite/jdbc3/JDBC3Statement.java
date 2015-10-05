@@ -88,6 +88,10 @@ public abstract class JDBC3Statement extends CoreStatement {
         return getResultSet();
     }
 
+    public ResultSet executeQuery() throws SQLException {
+	return executeQuery(sql);
+    }
+
     static class BackupObserver implements ProgressObserver
     {
         public void progress(int remaining, int pageCount) {
