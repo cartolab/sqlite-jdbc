@@ -149,10 +149,13 @@ public abstract class JDBC3Connection extends CoreConnection {
      */
     public void setAutoCommit(boolean ac) throws SQLException {
         checkOpen();
-        if (autoCommit == ac)
-            return;
         autoCommit = ac;
-        db.exec(autoCommit ? "commit;" : beginCommandMap.get(transactionMode));
+	try {
+	    db.exec(autoCommit ? "commit;" : beginCommandMap
+		    .get(transactionMode));
+	} catch (SQLException e) {
+	    // We ignore the exception
+	}
     }
 
     /**
