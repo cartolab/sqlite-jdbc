@@ -39,7 +39,7 @@ public class JDBC4ResultSet extends JDBC3ResultSet implements ResultSet, ResultS
 	}
 	if (n < row) {
 	    close();
-	    ((JDBC4PreparedStatement) stmt).execute();
+	    ((JDBC4Statement) stmt).executeQuery();
 	    return absolute(n);
 	}
 	return true;
