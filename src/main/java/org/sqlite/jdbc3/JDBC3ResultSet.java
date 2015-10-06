@@ -1321,11 +1321,9 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 	}
     }
 
-    // TODO We should store the boolean in the same format we try
-    // to parse it (0/1 instead of true/false)
     public void updateBoolean(int columnIndex, boolean x)
 	    throws SQLException {
-	updateValue(columnIndex, new Boolean(x));
+	updateValue(columnIndex, new Integer(x ? 1 : 0));
     }
 
     public void updateByte(int columnIndex, byte x)
@@ -1364,11 +1362,9 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 	}
     }
 
-    // TODO We should store the Date object in one of the formats
-    // we try to parse when retrieving it
     public void updateDate(int columnIndex, java.sql.Date x)
 	    throws SQLException {
-	updateValue(columnIndex, x);
+	updateValue(columnIndex, stmt.conn.dateFormat.format(x));
     }
 
     public void updateDouble(int columnIndex, double x)
@@ -1431,8 +1427,6 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 	updateNull(findColumn(columnName));
     }
 
-    // TODO We should store the boolean in the same format we try
-    // to parse it (0/1 instead of true/false)
     public void updateBoolean(String columnName, boolean x)
 	    throws SQLException {
 	updateBoolean(findColumn(columnName), x);
@@ -1483,8 +1477,6 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
 	updateBytes(findColumn(columnName), x);
     }
 
-    // TODO We should store the Date object in one of the formats
-    // we try to parse when retrieving it
     public void updateDate(String columnName, java.sql.Date x)
 	    throws SQLException {
 	updateDate(findColumn(columnName), x);
