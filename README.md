@@ -1,3 +1,14 @@
+SQLite JDBC Driver tuned for gvSIG compliance
+=============================================
+This is a fork of the [original SQLite JDBC Driver](https://github.com/xerial/sqlite-jdbc) made by [Taro L. Saito](http://www.xerial.org/leo), which has been tuned in order to work as part of a [specific driver for gvSIG](https://github.com/cartolab/libSpatialite).
+There have been three main changes:
+
+* Added random access to ResultSet.
+* Always keep an open transaction and ignore nested BEGINs, because gvSIG is very prone to execute nested COMMIT and BEGIN statements.
+* Added CUD operations for alphanumeric data.
+
+Below is the original README by [Taro L. Saito](http://www.xerial.org/leo), which still applies for almost the whole project.
+
 SQLite JDBC Driver
 ==================
 SQLite JDBC, developed by [Taro L. Saito](http://www.xerial.org/leo), is a library for accessing and creating [SQLite](http://sqlite.org) database files in Java.
