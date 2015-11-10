@@ -916,6 +916,15 @@ public abstract class JDBC3ResultSet extends CoreResultSet {
             if ("DATE".equals(typeName) || "DATETIME".equals(typeName)) {
                 return Types.DATE;
             }
+            
+            // Workaroud: If the column is declared as NUMERIC in CREATE TABLE
+            // and the first value inserted in the column is integer,
+            // db.column_type returns an SQLITE_INTEGER. Then the
+            // FieldDescription in gvSIG is an Integer field and does not allow
+            // the insert doubles
+            if ("NUMERIC".equals(typeName)) {
+        	return Types.NUMERIC;
+            }
     
             if (valueType == SQLITE_INTEGER ||
                 "INT".equals(typeName) ||
