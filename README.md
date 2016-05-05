@@ -27,6 +27,10 @@ git merge upstream/master
 
 Read also [this](https://help.github.com/articles/fork-a-repo/) and [this](https://help.github.com/articles/syncing-a-fork/) for more info.
 
+Each time the repo is synced edit this file to include the most uptodate commit
+
+https://github.com/xerial/sqlite-jdbc/commit/118288600bef15c4557cae901e73af3f14c80f7e
+
 Release
 =======
 
