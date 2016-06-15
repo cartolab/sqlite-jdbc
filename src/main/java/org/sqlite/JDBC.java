@@ -111,6 +111,7 @@ public class JDBC implements Driver
             return null;
 
         url = url.trim();
+        prop.put("foreign_keys", Boolean.toString(true));
         return new SQLiteConnection(url, extractAddress(url), prop);
     }
 }
